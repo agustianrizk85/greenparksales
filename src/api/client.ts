@@ -1,0 +1,76 @@
+import type { Dashboard, LoginResponse, User } from "../types";
+
+/** Backend base URL — override with VITE_API_BASE at build/dev time. */
+const BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:8085") + "/api";
+const TOKEN_KEY = "gp_sales_token";
+
+let token: string | null = localStorage.getItem(TOKEN_KEY);
+
+/** Thrown when the backend rejects the session (401) — App falls back to login. */
+export class AuthError extends Error {}
+
+function setToken(t: string | null) {
+  token = t;
+  if (t) localStorage.setItem(TOKEN_KEY, t);
+  else localStorage.removeItem(TOKEN_KEY);
+}
+
+async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (token) headers["Authorization"] = "Bearer " + token;
+
+  const res = await fetch(BASE + path, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  if (res.status === 401) {
+    setToken(null);
+    throw new AuthError("Sesi berakhir, silakan login kembali.");
+  }
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = ((await res.json()) as { error?: string }).error ?? "";
+    } catch {
+      /* no JSON body */
+    }
+    throw new Error(`HTTP ${res.status} ${detail}`.trim());
+  }
+  // 204 / empty body guard
+  const text = await res.text();
+  return (text ? JSON.parse(text) : null) as T;
+}
+
+export const api = {
+  base: BASE,
+  hasToken: () => !!token,
+
+  // ---- auth ----
+  async login(username: string, password: string): Promise<User> {
+    const res = await req<LoginResponse>("POST", "/auth/login", { username, password });
+    setToken(res.token);
+    return res.user;
+  },
+  async logout(): Promise<void> {
+    try {
+      await req("POST", "/auth/logout");
+    } finally {
+      setToken(null);
+    }
+  },
+  me: () => req<User>("GET", "/auth/me"),
+
+  // ---- reads ----
+  dashboard: () => req<Dashboard>("GET", "/dashboard"),
+
+  // ---- collection writes ----
+  saveEntity: <T>(collection: string, item: T) => req<T>("POST", "/" + collection, item),
+  deleteEntity: (collection: string, id: string) =>
+    req<{ status: string }>("DELETE", `/${collection}/${encodeURIComponent(id)}`),
+
+  // ---- singleton writes (PUT) ----
+  putSingleton: <T>(path: string, body: T) => req<T>("PUT", "/" + path, body),
+};
