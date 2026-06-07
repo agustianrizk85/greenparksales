@@ -20,7 +20,10 @@ export function ExecutiveDetail({ d }: { d: Dashboard }) {
     <div>
       <p className="md-lead">
         Posisi pencapaian menuju target <b>500 unit</b>. Realisasi akad <b>{e.akad}</b> ({pct((e.akad / e.target2026) * 100, 1)}) — status{" "}
-        <b style={{ color: STATUS.merah.c }}>off-track</b>, butuh akselerasi pipeline & cash-in.
+        <b style={{ color: d.summary.status === "on-track" ? STATUS.hijau.c : d.summary.status === "risk" ? STATUS.kuning.c : STATUS.merah.c }}>
+          {d.summary.status}
+        </b>
+        , butuh akselerasi pipeline & cash-in.
       </p>
       <table className="dtable">
         <thead>
@@ -92,8 +95,9 @@ export function FunnelDetail({ d }: { d: Dashboard }) {
   return (
     <div>
       <p className="md-lead">
-        Perjalanan konsumen dari <b>19.982 leads</b> hingga cash-in <b>{rpShort(d.exec.revenueAkad)}</b>. Tahap dengan konversi di bawah standar
-        GP ditandai merah/kuning.
+        Funnel <b>LEADS murni</b>: dari <b>20.291 leads</b> hingga <b>Purchaser {num(f[f.length - 1].value)}</b> (transaksi yang sumbernya
+        leads, non-batal — BR-9). Tahap di bawah standar GP ditandai merah/kuning. Penjualan total <b>semua sumber</b> ditampilkan terpisah:
+        Booking <b>{d.exec.booking}</b> · Akad <b>{d.exec.akad}</b> · Cash-In <b>{rpShort(d.exec.revenueAkad)}</b>.
       </p>
       <table className="dtable">
         <thead>
@@ -264,19 +268,19 @@ export function LeadQualityDetail({ d }: { d: Dashboard }) {
             <tr>
               <td>Total Leads</td>
               <td className="num">
-                <b>19.982</b>
+                <b>20.291</b>
               </td>
             </tr>
             <tr>
               <td>Valid Leads</td>
               <td className="num">
-                <b>13.037</b> <span className="muted">(65%)</span>
+                <b>13.255</b> <span className="muted">(65%)</span>
               </td>
             </tr>
             <tr>
               <td>Confirmed Visit</td>
               <td className="num">
-                <b>703</b>
+                <b>711</b>
               </td>
             </tr>
             <tr className="row-low">
@@ -390,7 +394,7 @@ export function CashDetail({ d }: { d: Dashboard }) {
   return (
     <div>
       <p className="md-lead">
-        Dari <b>{e.booking} booking</b>, baru <b>{e.akad} akad</b> (50%). <b>{e.proses}</b> tertahan di proses (potensi{" "}
+        Dari <b>{e.booking} booking</b>, baru <b>{e.akad} akad</b> ({pct((e.akad / e.booking) * 100, 0)}). <b>{e.proses}</b> tertahan di proses (potensi{" "}
         {rpShort(e.potentialRevenue)}), <b style={{ color: "#D6453A" }}>{e.batal} batal</b> = kebocoran cash.
       </p>
       <table className="dtable">

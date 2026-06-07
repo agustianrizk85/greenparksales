@@ -107,11 +107,12 @@ export function ExecutivePanel({ d, onExpand }: PanelProps) {
 /* ===================== PANEL 2 — MAIN FUNNEL ===================== */
 export function FunnelPanel({ d, onExpand }: PanelProps) {
   const f = d.funnel;
+  const e = d.exec;
   const maxV = f[0].value;
   return (
     <Card
       title="Main Funnel Monitoring"
-      tag="Panel 2 · Leads → Cash-In · Standar 20–70–30"
+      tag="Panel 2 · Funnel LEADS → Purchaser · Standar 20–70–30"
       accent="#0E5C34"
       onExpand={onExpand}
       icon={
@@ -156,8 +157,12 @@ export function FunnelPanel({ d, onExpand }: PanelProps) {
         })}
       </div>
       <div className="funnel-note">
-        <StatusDot s="merah" /> <b>Kebocoran utama Leads → CV: 5,4%</b> (standar ≥20%). 13.037 valid leads hanya jadi 703 visit — fokus
+        <StatusDot s="merah" /> <b>Kebocoran utama Leads → CV: 5,4%</b> (standar ≥20%). 13.255 valid leads hanya jadi 711 visit — fokus
         speed-to-lead & kualitas follow-up.
+      </div>
+      <div className="funnel-note" style={{ marginTop: 6 }}>
+        <b>Funnel di atas = LEADS saja</b> (Purchaser {num(d.funnel[d.funnel.length - 1].value)} = transaksi yang sumbernya leads). Penjualan
+        total memakai <b>semua sumber</b>: Booking <b>{e.booking}</b> · Akad <b>{e.akad}</b> · Cash-In <b>{rpShort(e.revenueAkad)}</b>.
       </div>
     </Card>
   );
@@ -263,7 +268,7 @@ export function SalesPanel({ d, onExpand }: PanelProps) {
       </div>
       <div className="sales-foot">
         <span>
-          <b style={{ color: "#1F9D54" }}>Top:</b> Ayu (11 akad · 85%)
+          <b style={{ color: "#1F9D54" }}>Top:</b> Ardan (13 akad · 57%)
         </span>
         <span>
           <b style={{ color: "#D6453A" }}>Coaching:</b> Suseno, Rahadian

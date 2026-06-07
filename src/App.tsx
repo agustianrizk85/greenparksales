@@ -49,7 +49,7 @@ interface DrillDef {
 
 const DRILLS: Record<string, DrillDef> = {
   exec: { title: "Executive Sales Snapshot", tag: "Panel 1 · Posisi menuju target 500 unit", render: (d) => <ExecutiveDetail d={d} />, wide: true },
-  funnel: { title: "Main Funnel Monitoring", tag: "Panel 2 · Leads → Cash-In", render: (d) => <FunnelDetail d={d} />, wide: true },
+  funnel: { title: "Main Funnel Monitoring", tag: "Panel 2 · Funnel LEADS → Purchaser", render: (d) => <FunnelDetail d={d} />, wide: true },
   project: { title: "Project Sales Monitoring", tag: "Panel 5 · 12 project", render: (d) => <ProjectDetail d={d} />, wide: true },
   sales: { title: "Sales Performance", tag: "Panel 4 · 21 kontributor", render: (d) => <SalesDetail d={d} />, wide: true },
   lq: { title: "Lead Quality & Ads Efficiency", tag: "Panel 3 · Kualitas leads & cost/akad", render: (d) => <LeadQualityDetail d={d} />, wide: true },
