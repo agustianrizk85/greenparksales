@@ -66,9 +66,13 @@ export const api = {
   // ---- reads ----
   dashboard: () => req<Dashboard>("GET", "/dashboard"),
   version: () => req<{ rev: number }>("GET", "/version"),
-  /** WebSocket URL for realtime push (null when not authenticated). */
-  realtimeURL: () =>
-    token ? BASE.replace(/^http/, "ws") + "/ws?token=" + encodeURIComponent(token) : null,
+  /** WebSocket URL for realtime push (null when not authenticated). Builds an
+   *  absolute ws/wss URL even when BASE is relative ("/api" in production). */
+  realtimeURL: () => {
+    if (!token) return null;
+    const httpBase = BASE.startsWith("http") ? BASE : window.location.origin + BASE;
+    return httpBase.replace(/^http/, "ws") + "/ws?token=" + encodeURIComponent(token);
+  },
 
   // ---- collection writes ----
   saveEntity: <T>(collection: string, item: T) => req<T>("POST", "/" + collection, item),
