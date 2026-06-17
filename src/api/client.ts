@@ -1,4 +1,4 @@
-import type { Dashboard, LoginResponse, User } from "../types";
+import type { AutoSyncStatus, Dashboard, ImportRecord, ImportResult, LoginResponse, User } from "../types";
 
 /** Backend base URL — override with VITE_API_BASE at build/dev time. */
 const BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:8085") + "/api";
@@ -65,6 +65,10 @@ export const api = {
 
   // ---- reads ----
   dashboard: () => req<Dashboard>("GET", "/dashboard"),
+  version: () => req<{ rev: number }>("GET", "/version"),
+  /** WebSocket URL for realtime push (null when not authenticated). */
+  realtimeURL: () =>
+    token ? BASE.replace(/^http/, "ws") + "/ws?token=" + encodeURIComponent(token) : null,
 
   // ---- collection writes ----
   saveEntity: <T>(collection: string, item: T) => req<T>("POST", "/" + collection, item),
@@ -73,4 +77,44 @@ export const api = {
 
   // ---- singleton writes (PUT) ----
   putSingleton: <T>(path: string, body: T) => req<T>("PUT", "/" + path, body),
+
+  // ---- import / upload pipeline ----
+  importPreview: (file: File) => upload<ImportResult>("/import/preview", file),
+  importApprove: (file: File) => upload<ImportRecord>("/import/approve", file),
+  importHistory: () => req<ImportRecord[]>("GET", "/import/history"),
+  importRollback: (id: string) =>
+    req<ImportRecord>("POST", `/import/rollback/${encodeURIComponent(id)}`),
+  importReset: () => req<ImportRecord>("POST", "/import/reset"),
+
+  // ---- Google Sheets sync ----
+  syncPreview: () => req<ImportResult>("POST", "/import/sync-preview"),
+  syncApprove: () => req<ImportRecord>("POST", "/import/sync-approve"),
+  autoStatus: () => req<AutoSyncStatus>("GET", "/import/auto"),
+  autoSet: (enabled: boolean, intervalSec: number) =>
+    req<AutoSyncStatus>("PUT", "/import/auto", { enabled, intervalSec }),
 };
+
+/** upload posts a single file as multipart/form-data under field "file". */
+async function upload<T>(path: string, file: File): Promise<T> {
+  const form = new FormData();
+  form.append("file", file);
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = "Bearer " + token;
+
+  const res = await fetch(BASE + path, { method: "POST", headers, body: form });
+  if (res.status === 401) {
+    setToken(null);
+    throw new AuthError("Sesi berakhir, silakan login kembali.");
+  }
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = ((await res.json()) as { error?: string }).error ?? "";
+    } catch {
+      /* no JSON body */
+    }
+    throw new Error(`HTTP ${res.status} ${detail}`.trim());
+  }
+  const text = await res.text();
+  return (text ? JSON.parse(text) : null) as T;
+}

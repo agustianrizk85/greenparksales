@@ -5,6 +5,20 @@ import { funnelConv } from "../lib/format";
 
 type PanelProps = { d: Dashboard; onExpand: () => void };
 
+/**
+ * EmptyCard renders a panel shell with a "no data" hint, used when a panel's
+ * underlying collection is empty (e.g. reasons/agents are not part of an Excel
+ * upload, so they stay empty until entered manually).
+ */
+function EmptyCard({ title, tag }: { title: string; tag?: string; onExpand?: () => void }) {
+  // Intentionally not expandable: there is nothing to drill into.
+  return (
+    <Card title={title} tag={tag} accent="#0E5C34">
+      <div className="panel-empty">Belum ada data — isi lewat Upload Excel atau Master Data.</div>
+    </Card>
+  );
+}
+
 /* ===================== PANEL 1 — EXECUTIVE SNAPSHOT ===================== */
 export function ExecutivePanel({ d, onExpand }: PanelProps) {
   const e = d.exec;
@@ -108,6 +122,8 @@ export function ExecutivePanel({ d, onExpand }: PanelProps) {
 export function FunnelPanel({ d, onExpand }: PanelProps) {
   const f = d.funnel;
   const e = d.exec;
+  if (f.length === 0)
+    return <EmptyCard title="Main Funnel Monitoring" tag="Panel 2 · Funnel LEADS → Purchaser" onExpand={onExpand} />;
   const maxV = f[0].value;
   return (
     <Card
@@ -157,7 +173,11 @@ export function FunnelPanel({ d, onExpand }: PanelProps) {
         })}
       </div>
       <div className="funnel-note">
-        <StatusDot s="merah" /> <b>Kebocoran utama Leads → CV: 5,4%</b> (standar ≥20%). 13.255 valid leads hanya jadi 711 visit — fokus
+        <StatusDot s="merah" />{" "}
+        <b>
+          Kebocoran utama Leads → CV: {f.length > 2 ? pct((f[2].value / f[1].value) * 100, 1) : "—"}
+        </b>{" "}
+        (standar ≥20%). {num(f[1].value)} valid leads, hanya {num(f.length > 2 ? f[2].value : 0)} jadi Confirmed Visit — fokus
         speed-to-lead & kualitas follow-up.
       </div>
       <div className="funnel-note" style={{ marginTop: 6 }}>
@@ -171,6 +191,8 @@ export function FunnelPanel({ d, onExpand }: PanelProps) {
 /* ===================== PANEL 3 — LEAD QUALITY ===================== */
 export function LeadQualityPanel({ d, onExpand }: PanelProps) {
   const f = d.funnel;
+  if (f.length < 2)
+    return <EmptyCard title="Lead Quality & Ads Efficiency" tag="Panel 3 · Kualitas Leads" onExpand={onExpand} />;
   const leads = f[0].value;
   const valid = f[1].value;
   return (
@@ -232,11 +254,13 @@ export function LeadQualityPanel({ d, onExpand }: PanelProps) {
 /* ===================== PANEL 4 — SALES PERFORMANCE ===================== */
 export function SalesPanel({ d, onExpand }: PanelProps) {
   const ranked = [...d.sales].sort((a, b) => b.akad - a.akad || b.conv - a.conv).slice(0, 8);
-  const maxA = ranked[0].akad;
+  if (ranked.length === 0)
+    return <EmptyCard title="Sales Performance" tag="Panel 4 · Ranking Akad" onExpand={onExpand} />;
+  const maxA = ranked[0].akad || 1;
   return (
     <Card
       title="Sales Performance"
-      tag="Panel 4 · 21 Kontributor · Ranking Akad"
+      tag={`Panel 4 · ${d.sales.length} Kontributor · Ranking Akad`}
       accent="#0E5C34"
       onExpand={onExpand}
       icon={
@@ -268,10 +292,16 @@ export function SalesPanel({ d, onExpand }: PanelProps) {
       </div>
       <div className="sales-foot">
         <span>
-          <b style={{ color: "#1F9D54" }}>Top:</b> Ardan (13 akad · 57%)
+          <b style={{ color: "#1F9D54" }}>Top:</b> {ranked[0].name} ({ranked[0].akad} akad · {ranked[0].conv}%)
         </span>
         <span>
-          <b style={{ color: "#D6453A" }}>Coaching:</b> Suseno, Rahadian
+          <b style={{ color: "#D6453A" }}>Coaching:</b>{" "}
+          {[...d.sales]
+            .filter((s) => s.total >= 3)
+            .sort((a, b) => a.conv - b.conv)
+            .slice(0, 2)
+            .map((s) => s.name)
+            .join(", ") || "—"}
         </span>
       </div>
     </Card>
@@ -281,11 +311,13 @@ export function SalesPanel({ d, onExpand }: PanelProps) {
 /* ===================== PANEL 5 — PROJECT MONITORING ===================== */
 export function ProjectPanel({ d, onExpand, onPick }: PanelProps & { onPick?: (p: Project) => void }) {
   const ps = [...d.projects].sort((a, b) => b.rev - a.rev);
-  const maxRev = Math.max(...ps.map((p) => p.rev));
+  if (ps.length === 0)
+    return <EmptyCard title="Project Sales Monitoring" tag="Panel 5 · Mesin Utama vs Pembenahan" onExpand={onExpand} />;
+  const maxRev = Math.max(...ps.map((p) => p.rev), 1);
   return (
     <Card
       title="Project Sales Monitoring"
-      tag="Panel 5 · 12 Project · Mesin Utama vs Pembenahan"
+      tag={`Panel 5 · ${d.projects.length} Project · Mesin Utama vs Pembenahan`}
       accent="#0E5C34"
       onExpand={onExpand}
       icon={
@@ -372,6 +404,8 @@ export function ChannelPanel({ d, onExpand }: PanelProps) {
 /* ===================== PANEL 7 — REASON CODE ===================== */
 export function ReasonPanel({ d, onExpand }: PanelProps) {
   const top = [...d.reasons].sort((a, b) => b.count - a.count).slice(0, 6);
+  if (top.length === 0)
+    return <EmptyCard title="Opportunity Loss · Reason Code" tag="Panel 7 · 3-Layer · Kenapa Prospek Hilang" onExpand={onExpand} />;
   const max = top[0].count;
   return (
     <Card
@@ -482,9 +516,11 @@ export function CashPanel({ d, onExpand }: PanelProps) {
 export function AgentEventPanel({ d, onExpand }: PanelProps) {
   const a = d.agents;
   const ev = d.events.attributed;
+  const agentAkad = a.reduce((x, y) => x + y.akad, 0);
+  const contrib = d.exec.akad > 0 ? Math.round((agentAkad / d.exec.akad) * 1000) / 10 : 0;
   return (
     <Card
-      title="Agent & Event"
+      title="Agent Performance"
       tag="Panel 9 · Kontribusi Eksternal"
       accent="#0E5C34"
       onExpand={onExpand}
@@ -501,11 +537,11 @@ export function AgentEventPanel({ d, onExpand }: PanelProps) {
           <span>Agent Aktif</span>
         </div>
         <div className="ag-s">
-          <b style={{ color: "#1F9D54" }}>{a.reduce((x, y) => x + y.akad, 0)}</b>
+          <b style={{ color: "#1F9D54" }}>{agentAkad}</b>
           <span>Akad Agent</span>
         </div>
         <div className="ag-s">
-          <b>8%</b>
+          <b>{contrib}%</b>
           <span>Kontribusi</span>
         </div>
       </div>

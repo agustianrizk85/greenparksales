@@ -9,3 +9,9 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Google service-account credentials — never commit
+keen-scion-*.json
+*.serviceaccount.json
+*-credentials.json
+*service-account*.json

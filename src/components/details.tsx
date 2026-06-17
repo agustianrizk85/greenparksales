@@ -490,6 +490,26 @@ export function ChannelDetail({ d }: { d: Dashboard }) {
 
 /* ---------- Panel 9 — Agent & Event ---------- */
 export function AgentEventDetail({ d }: { d: Dashboard }) {
+  const ev = d.events.attributed;
+  const agentAkad = d.agents.reduce((s, a) => s + a.akad, 0);
+  const contrib = d.exec.akad > 0 ? Math.round((agentAkad / d.exec.akad) * 1000) / 10 : 0;
+  const top = [...d.agents].sort((a, b) => b.akad - a.akad)[0];
+  const idle = d.agents.filter((a) => a.akad === 0);
+
+  // Auto-generated ("AI") insights from the agent + event data.
+  const insights: string[] = [];
+  if (top && top.akad > 0) insights.push(`Agent terbaik: ${top.name} (${top.akad} akad · ${top.conv}% konversi).`);
+  insights.push(
+    `Kontribusi agent ${contrib}% dari total akad` +
+      (contrib < 15 ? " — di bawah target 15%, dorong rekrut & aktivasi agent produktif." : " — sudah memenuhi target 15%."),
+  );
+  if (idle.length) insights.push(`${idle.length} agent perlu reaktivasi (0 akad): ${idle.map((a) => a.name).join(", ")}.`);
+  if (ev.booking > 0)
+    insights.push(
+      `Event/Walk-in: ${ev.akad} akad dari ${ev.booking} booking (${ev.conv}%)` +
+        (ev.conv >= 50 ? " — konversi sehat, perbanyak undangan/open house." : " — konversi rendah, perbaiki follow-up pasca-event."),
+    );
+
   return (
     <div className="md-grid2">
       <div>
@@ -529,20 +549,21 @@ export function AgentEventDetail({ d }: { d: Dashboard }) {
             ))}
           </tbody>
         </table>
-        <p className="md-foot muted">Kontribusi agent: 11 booking (8% dari total). Target naik ke 15%.</p>
+        <p className="md-foot muted">
+          Kontribusi agent: {agentAkad} akad ({contrib}% dari total). Target ≥15%.
+        </p>
       </div>
       <div>
-        <h4 className="md-sub">Event Performance</h4>
+        <h4 className="md-sub">🤖 AI Insight — Agent Performance</h4>
         <div className="callout">
-          <b>{d.events.attributed.name}</b>
+          <b>{ev.name}</b>
           <br />
-          {d.events.attributed.booking} booking · {d.events.attributed.akad} akad · konversi {d.events.attributed.conv}%
+          {ev.booking} booking · {ev.akad} akad · konversi {ev.conv}%
         </div>
-        <p className="md-lead">{d.events.note}</p>
-        <ul className="md-pending">
-          <li>Budget Event per acara</li>
-          <li>Cost per Lead / Cost per PV</li>
-          <li>ROI Event (lanjut / stop / optimasi)</li>
+        <ul className="md-insight">
+          {insights.map((t, i) => (
+            <li key={i}>{t}</li>
+          ))}
         </ul>
       </div>
     </div>

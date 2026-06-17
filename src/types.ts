@@ -166,6 +166,18 @@ export interface Summary {
   status: string;
 }
 
+/** Per-project slice of the dashboard, used by the project filter. */
+export interface ProjectView {
+  exec: Exec;
+  funnel: FunnelStage[];
+  channels: Channel[];
+  sales: SalesRep[];
+  reasons: Reason[];
+  agents: Agent[];
+  monthly: MonthPoint[];
+  events: Events;
+}
+
 /** Full payload returned by GET /api/dashboard. */
 export interface Dashboard {
   period: string;
@@ -184,6 +196,7 @@ export interface Dashboard {
   alerts: Alert[];
   kpis: KPI[];
   summary: Summary;
+  byProject?: Record<string, ProjectView>;
 }
 
 /** Authenticated account (mirrors backend domain.User, no password material). */
@@ -198,4 +211,90 @@ export interface User {
 export interface LoginResponse {
   token: string;
   user: User;
+}
+
+/** Severity of an import validation issue. */
+export type IssueSeverity = "error" | "warning" | "info";
+
+/** One validation finding from an upload. */
+export interface ImportIssue {
+  check: string;
+  severity: IssueSeverity;
+  sheet: string;
+  row?: number;
+  message: string;
+}
+
+/** Headline figures of an upload preview. */
+export interface ImportHeadline {
+  leads: number;
+  validLeads: number;
+  cv: number;
+  pv: number;
+  purchaser: number;
+  booking: number;
+  akad: number;
+  proses: number;
+  batal: number;
+  cashIn: number;
+  leadsRaw: number;
+  droppedWrong: number;
+  droppedDup: number;
+  droppedPeriod: number;
+  visitorWalkIns: number;
+}
+
+/** One MASTER DATA_LEADS row discarded during cleaning. */
+export interface DroppedRow {
+  row: number;
+  reason: "wrong" | "duplikat" | "periode";
+  name: string;
+  phone: string;
+  project: string;
+  date: string;
+  detail: string;
+}
+
+/** Result of POST /api/import/preview. */
+export interface ImportResult {
+  headline: ImportHeadline;
+  issues: ImportIssue[];
+  rowsRead: Record<string, number>;
+  dropped: DroppedRow[];
+  preview: Dashboard;
+}
+
+/** Summary stored per approved import. */
+export interface ImportSummary {
+  leads: number;
+  validLeads: number;
+  cv: number;
+  pv: number;
+  booking: number;
+  akad: number;
+  proses: number;
+  batal: number;
+  cashIn: number;
+  issues: number;
+}
+
+/** Auto-sync scheduler status. */
+export interface AutoSyncStatus {
+  enabled: boolean;
+  intervalSec: number;
+  configured: boolean;
+  lastSync: string;
+  lastError: string;
+  lastSummary: ImportSummary;
+}
+
+/** One row in the import history. */
+export interface ImportRecord {
+  id: string;
+  time: string;
+  filename: string;
+  by: string;
+  summary: ImportSummary;
+  rolledBack: boolean;
+  canRollback: boolean;
 }
