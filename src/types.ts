@@ -166,6 +166,22 @@ export interface Summary {
   status: string;
 }
 
+/** One transaction record from DATA PENJUALAN (drill-down for Panel 6 & 8). */
+export interface SaleRow {
+  project: string;
+  unit?: string;
+  name: string;
+  phone?: string;
+  closer?: string;
+  status: "akad" | "proses" | "batal";
+  rawStatus?: string;
+  booking?: string;
+  akad?: string;
+  revenue: number;
+  sumber?: string;
+  channel?: string; // cleaned Platform category (matches the Sumber Penjualan panel)
+}
+
 /** Per-project slice of the dashboard, used by the project filter. */
 export interface ProjectView {
   exec: Exec;
@@ -197,6 +213,7 @@ export interface Dashboard {
   kpis: KPI[];
   summary: Summary;
   byProject?: Record<string, ProjectView>;
+  saleRows?: SaleRow[];
 }
 
 /** Authenticated account (mirrors backend domain.User, no password material). */

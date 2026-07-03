@@ -1,4 +1,5 @@
-import type { Dashboard } from "../types";
+import { Fragment, useState } from "react";
+import type { Channel, Dashboard, SaleRow } from "../types";
 import { Pill } from "./ui";
 import { CAT, CH_C, LAYER_C, SEV, STATUS, convColor, effClass, funnelConv, num, pct, rpShort, statusFor } from "../lib/format";
 
@@ -445,12 +446,21 @@ export function CashDetail({ d }: { d: Dashboard }) {
 }
 
 /* ---------- Panel 6 — Channels ---------- */
+const CH_STATUS: Record<SaleRow["status"], { label: string; c: string; bg: string }> = {
+  akad: { label: "Akad", c: "#1F9D54", bg: "#E8F6ED" },
+  proses: { label: "Proses/KPR", c: "#D9930B", bg: "#FCF4E2" },
+  batal: { label: "Batal", c: "#D6453A", bg: "#FBEAE8" },
+};
+
 export function ChannelDetail({ d }: { d: Dashboard }) {
-  const max = Math.max(...d.channels.map((c) => c.total));
+  const max = Math.max(...d.channels.map((c) => c.total), 1);
+  // Selected source (channel.code) whose buyer-identity table is expanded.
+  const [sel, setSel] = useState<string | null>(null);
   return (
     <div>
       <p className="md-lead">
-        WhatsApp, Walk-in/Event, dan Instagram (Meta Ads) jadi tiga mesin booking utama. Buyer-Get-Buyer kecil tapi konversi 100%.
+        WhatsApp, Walkin, dan Instagram (Meta Ads) jadi tiga mesin booking utama.{" "}
+        <span className="muted">Klik baris sumber untuk lihat detail identitas pembeli.</span>
       </p>
       <table className="dtable">
         <thead>
@@ -463,27 +473,121 @@ export function ChannelDetail({ d }: { d: Dashboard }) {
           </tr>
         </thead>
         <tbody>
-          {d.channels.map((c, i) => (
-            <tr key={c.code}>
-              <td>
-                <b>{c.name}</b>
-              </td>
-              <td>
-                <div className="tbar">
-                  <div style={{ width: (c.total / max) * 100 + "%", background: CH_C[i] }} />
-                </div>
-              </td>
-              <td className="num">{c.total}</td>
-              <td className="num">
-                <b>{c.akad}</b>
-              </td>
-              <td className="num" style={{ color: c.conv >= 50 ? "#1F9D54" : "#D9930B" }}>
-                <b>{c.conv}%</b>
-              </td>
-            </tr>
-          ))}
+          {d.channels.map((c, i) => {
+            const open = sel === c.code;
+            const color = CH_C[i % CH_C.length];
+            return (
+              <Fragment key={c.code}>
+                <tr
+                  className={"cdr-row" + (open ? " open" : "")}
+                  onClick={() => setSel(open ? null : c.code)}
+                  title={`Klik untuk ${open ? "tutup" : "lihat"} identitas ${c.name}`}
+                >
+                  <td>
+                    <span className="cdr-caret" style={{ color }}>
+                      {open ? "▾" : "▸"}
+                    </span>
+                    <b>{c.name}</b>
+                  </td>
+                  <td>
+                    <div className="tbar">
+                      <div style={{ width: (c.total / max) * 100 + "%", background: color }} />
+                    </div>
+                  </td>
+                  <td className="num">{c.total}</td>
+                  <td className="num">
+                    <b>{c.akad}</b>
+                  </td>
+                  <td className="num" style={{ color: c.conv >= 50 ? "#1F9D54" : "#D9930B" }}>
+                    <b>{c.conv}%</b>
+                  </td>
+                </tr>
+                {open && (
+                  <tr className="cdr-detail-row">
+                    <td colSpan={5}>
+                      <ChannelIdentityTable d={d} channel={c} color={color} onClose={() => setSel(null)} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** ChannelIdentityTable lists the buyers (identitas) behind a selected source,
+ * from the DATA PENJUALAN rows tagged with that Platform category. */
+function ChannelIdentityTable({ d, channel, color, onClose }: { d: Dashboard; channel: Channel; color: string; onClose: () => void }) {
+  const rows = (d.saleRows ?? []).filter((r) => (r.channel ?? "") === channel.code);
+  return (
+    <div className="cdr-detail" style={{ borderColor: color }}>
+      <div className="cdr-detail-head">
+        <div>
+          <b>{channel.name}</b>{" "}
+          <span className="muted">
+            · {channel.total} transaksi · {channel.akad} akad · konversi {channel.conv}%
+          </span>
+        </div>
+        <button className="cdr-detail-close" onClick={onClose} title="Tutup tabel identitas" aria-label="Tutup">
+          ✕
+        </button>
+      </div>
+      {rows.length === 0 ? (
+        <p className="md-foot muted">
+          Identitas belum tersedia pada data ini — jalankan ulang Upload Excel / sinkron Sheets untuk memuat detail DATA PENJUALAN.
+        </p>
+      ) : (
+        <>
+          <div className="cdr-detail-scroll">
+            <table className="dtable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nama</th>
+                  <th>Project</th>
+                  <th>Unit</th>
+                  <th>Sales</th>
+                  <th>No. HP</th>
+                  <th>Tgl Booking</th>
+                  <th>Tgl Akad</th>
+                  <th>Status</th>
+                  <th className="num">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}>
+                    <td className="muted">{i + 1}</td>
+                    <td>
+                      <b>{r.name || "—"}</b>
+                    </td>
+                    <td>{r.project || "—"}</td>
+                    <td>{r.unit || "—"}</td>
+                    <td className="muted small">{r.closer || "—"}</td>
+                    <td className="num" title={r.phone}>
+                      {r.phone || "—"}
+                    </td>
+                    <td className="muted small">{r.booking || "—"}</td>
+                    <td className="muted small">{r.akad || "—"}</td>
+                    <td>
+                      <Pill color={CH_STATUS[r.status].c} bg={CH_STATUS[r.status].bg}>
+                        {CH_STATUS[r.status].label}
+                      </Pill>
+                    </td>
+                    <td className="num">{r.revenue ? rpShort(r.revenue) : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="md-foot muted">
+            Menampilkan <b>{num(rows.length)}</b> identitas dari sumber <b>{channel.name}</b>. Sumber: DATA PENJUALAN.
+          </p>
+        </>
+      )}
     </div>
   );
 }

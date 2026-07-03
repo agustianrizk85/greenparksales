@@ -171,7 +171,7 @@ function mergeViews(views: ProjectView[]): ProjectView {
   const evB = views.reduce((s, v) => s + v.events.attributed.booking, 0);
   const evA = views.reduce((s, v) => s + v.events.attributed.akad, 0);
   const events = {
-    attributed: { name: "Walk-in / Undangan", booking: evB, akad: evA, conv: evB ? Math.round((evA / evB) * 100) : 0 },
+    attributed: { name: "Walkin", booking: evB, akad: evA, conv: evB ? Math.round((evA / evB) * 100) : 0 },
     note: views[0].events.note,
   };
 
